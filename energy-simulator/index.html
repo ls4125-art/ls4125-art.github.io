@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Asia Energy Crisis Simulator — Lyu Song</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #F6F5F0; color: #222; font-family: 'Inter', -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  button { font-family: inherit; cursor: pointer; }
+  button:hover { opacity: 0.88; }
+  ::selection { background: #C8D8E4; }
+  a { color: #2B6777; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const COUNTRIES = {
+  china:  { name: "China",       abbr: "CN",    color: "#B44040" },
+  japan:  { name: "Japan",       abbr: "JP",    color: "#2B6777" },
+  korea:  { name: "South Korea", abbr: "KR",    color: "#3A7D44" },
+  india:  { name: "India",       abbr: "IN",    color: "#9B7B2F" },
+  asean:  { name: "ASEAN",       abbr: "ASEAN", color: "#7B5EA7" },
+};
+
+const SHOCKS = {
+  russia_gas: {
+    id: "russia_gas", title: "Russia Gas Cut", subtitle: "Pipeline & LNG Supply Disruption", num: "01",
+    tagline: "What happens when Europe's crisis becomes Asia's problem?",
+    description: "Russia supplies ~10% of global LNG and operates major pipelines to China. A full gas export cut disrupts Asian spot LNG markets, spikes prices, and forces emergency fuel-switching. Countries with high pipeline dependency (China) or LNG spot exposure (Japan, Korea) face immediate supply crunches.",
+    mechanism: "Supply cut  >  LNG spot price spike  >  fuel-switching to coal/oil  >  emissions surge",
+    impacts: {
+      china: { score: 0.55, level: "Medium", detail: "Power of Siberia pipeline exposure (~38 bcm/yr capacity). But diversified LNG sources (Australia, Qatar, US) and large domestic coal reserves buffer the shock. Short-term industrial gas users face curtailment." },
+      japan: { score: 0.82, level: "High", detail: "World's 2nd largest LNG importer with ~8% from Russia (Sakhalin-2). Post-Fukushima nuclear phase-down means heavy gas reliance for power generation. Limited alternatives beyond restarting nuclear reactors." },
+      korea: { score: 0.78, level: "High", detail: "3rd largest LNG importer globally with minimal domestic production. Gas supplies ~27% of power generation. Limited strategic gas reserves compared to oil SPR." },
+      india: { score: 0.30, level: "Low", detail: "Low gas import dependency from Russia. Coal-dominated power sector (70%+) provides a crude buffer, though rising LNG demand for industry and city gas distribution creates emerging vulnerability." },
+      asean: { score: 0.35, level: "Low-Med", detail: "Mixed picture: Indonesia/Malaysia are net LNG exporters and benefit from price spikes. Thailand, Singapore, and Philippines face higher costs as LNG import growth accelerates." },
+    },
+    timeline: {
+      short: { title: "0 - 6 months", effects: "LNG spot prices spike 40-80%. Japan/Korea activate emergency procurement from Qatar, Australia, US. Industrial gas rationing possible in peak demand months." },
+      medium: { title: "6 - 24 months", effects: "Long-term contract renegotiations accelerate. Japan restarts 5-8 additional nuclear reactors. Korea expands coal plant utilization despite climate pledges. New LNG terminals expedited." },
+      long: { title: "2 - 5 years", effects: "Structural shift: Japan doubles down on nuclear restart + hydrogen strategy. China accelerates domestic shale gas and renewable buildout. Regional LNG buyer coordination emerges (Asian Premium reduction)." },
+    },
+    hidden: [
+      { title: "Coal Rebound", text: "Gas shortage forces coal-fired power resurgence. Japan and Korea's 2030 emissions targets become nearly impossible. Coal import competition with India intensifies." },
+      { title: "Nuclear Renaissance", text: "Crisis accelerates Japan's nuclear restart debate. Public opinion shifts as energy bills double. Korea's nuclear phase-out policy reverses under energy security pressure." },
+      { title: "China's Pipeline Leverage", text: "China's bilateral pipeline deals with Central Asia (Turkmenistan) and Russia give it diversification options others lack, widening the intra-Asian energy security gap." },
+    ],
+    insights: [
+      { country: "japan", text: "Japan is the most exposed to a Russian gas cut due to post-Fukushima nuclear dependency on LNG. Without nuclear restarts, Japan lacks a credible backup, making energy security and nuclear policy inseparable." },
+      { country: "china", text: "China's bilateral pipeline diplomacy (Power of Siberia, Central Asia) gives it structural diversification that island economies simply cannot replicate. The gas shock widens intra-Asian security asymmetries." },
+      { country: "korea", text: "Korea's concentrated LNG dependency with thin strategic reserves makes it a price-taker in crisis. The lack of domestic alternatives or nuclear expansion plans creates a persistent vulnerability loop." },
+    ],
+    crossCutting: "A gas supply crisis doesn't just test energy systems. It tests the political sustainability of climate commitments. When faced with energy insecurity, every country's first instinct is to reach for coal, revealing the tension between energy security and decarbonization.",
+  },
+  hormuz: {
+    id: "hormuz", title: "Strait of Hormuz Disruption", subtitle: "Middle East Oil & LNG Chokepoint Crisis", num: "02",
+    tagline: "21% of global oil flows through a 33km-wide strait.",
+    description: "The Strait of Hormuz is the world's most critical energy chokepoint. ~20 million barrels/day of oil and ~25% of global LNG transits through it. A military blockade or closure would trigger the most severe energy supply crisis since 1973, disproportionately hitting Asia's import-dependent economies.",
+    mechanism: "Chokepoint closure  >  oil & LNG supply halt  >  global price shock  >  strategic reserve drawdown",
+    impacts: {
+      china: { score: 0.62, level: "Medium-High", detail: "~44% of crude imports transit Hormuz. But China has diversified via overland pipelines (Russia, Central Asia, Myanmar) and maintains ~80 days of strategic petroleum reserves. Still, sheer volume dependence creates massive price exposure." },
+      japan: { score: 0.92, level: "Critical", detail: "~88% of crude oil and ~25% of LNG imports pass through Hormuz. Virtually no overland alternatives. Strategic reserves (~200 days) buy time but not a solution. Most vulnerable major economy to this scenario." },
+      korea: { score: 0.88, level: "Critical", detail: "~70% of crude oil imports transit Hormuz. Entire petrochemical export industry (5th largest globally) threatened. 90-day strategic reserves, but refinery shutdowns cascade to manufacturing." },
+      india: { score: 0.75, level: "High", detail: "~60% of crude imports from Persian Gulf. Limited strategic reserves (~65 days). Domestic refining capacity (world's 4th largest) becomes useless without feedstock. Subsidy burden on government explodes." },
+      asean: { score: 0.45, level: "Medium", detail: "Varied exposure. Singapore's refining hub at risk. Indonesia/Malaysia less affected as net oil/gas producers. But all face price transmission effects and potential Malacca Strait secondary disruption." },
+    },
+    timeline: {
+      short: { title: "0 - 3 months", effects: "Oil prices surge to $150-200+/bbl. Strategic reserves activated globally (IEA coordinated release). Asian spot LNG hits record highs. Shipping insurance costs soar 1000%+." },
+      medium: { title: "3 - 12 months", effects: "Demand destruction begins. Industrial rationing in Japan/Korea. India implements fuel subsidies, fiscal deficit widens. Alternative routing via Suez (longer, costlier) partially compensates." },
+      long: { title: "1 - 3 years", effects: "Accelerated investment in pipeline alternatives (China-Myanmar, India-Iran). Japan/Korea build larger strategic reserves. Structural push toward electrification and renewables as 'domestic energy'." },
+    },
+    hidden: [
+      { title: "Petrochemical Cascade", text: "Korea's $50B+ petrochemical industry (Samsung, LG Chem, SK) faces feedstock crisis. Downstream impacts hit global semiconductor, EV battery, and plastics supply chains." },
+      { title: "Food Security Nexus", text: "Oil price spike drives fertilizer costs up 200%+. Asia's rice-producing nations face dual energy-food crisis. India's urea subsidy bill could triple." },
+      { title: "US Security Commitment Test", text: "Tests the credibility of US naval security guarantees in Asia. Japan and Korea's alliance dependence for energy security becomes starkly visible." },
+    ],
+    insights: [
+      { country: "japan", text: "With ~88% crude oil transiting Hormuz, Japan's vulnerability is existential, not marginal. Strategic reserves buy time (200 days), but no amount of stockpiling substitutes for route diversification that Japan geographically cannot achieve." },
+      { country: "india", text: "India faces a dual energy-food crisis: oil price spikes drive fertilizer costs up, threatening both industrial output and food security for 1.4 billion people. The energy-food nexus is India's unique vulnerability." },
+      { country: "korea", text: "Korea's $50B+ petrochemical sector creates a uniquely industrial form of energy insecurity. A Hormuz closure doesn't just raise household energy costs, it threatens a core pillar of the export economy." },
+    ],
+    crossCutting: "The Hormuz scenario reveals that Asia's energy insecurity is fundamentally a geographic problem. Countries with continental connections (China, India) have options; island and peninsular economies (Japan, Korea) do not. Geography remains the most stubborn variable in energy security.",
+  },
+  rare_earth: {
+    id: "rare_earth", title: "Rare Earth Export Restriction", subtitle: "China Restricts Critical Mineral Exports", num: "03",
+    tagline: "The hidden dependency that could stall Asia's green transition.",
+    description: "China controls ~60% of rare earth mining and ~90% of processing. A targeted export restriction on rare earth elements (neodymium, dysprosium, etc.) and processed materials would cripple EV manufacturing, wind turbine production, and advanced electronics across Asia, exposing the 'green transition paradox' where decarbonization increases mineral dependency.",
+    mechanism: "Export restriction  >  mineral supply deficit  >  EV & renewable production slowdown  >  green transition stalls",
+    impacts: {
+      china: { score: 0.15, level: "Beneficiary", detail: "As the restricting country, China gains strategic leverage and forces onshoring of downstream manufacturing. Domestic EV/renewable industry gains competitive advantage. Risk: trade retaliation and demand destruction." },
+      japan: { score: 0.85, level: "High", detail: "Traumatic precedent: 2010 rare earth embargo. Since then, Japan invested heavily in recycling, substitution, and alternative sources (Australia, India). Better prepared than 2010, but still ~58% dependent on Chinese supply for critical magnets." },
+      korea: { score: 0.80, level: "High", detail: "Samsung SDI, LG Energy Solution, SK Innovation all require rare earth inputs for EV batteries and motors. ~80% of rare earth imports from China. Limited domestic recycling infrastructure compared to Japan." },
+      india: { score: 0.50, level: "Medium", detail: "Has the world's 5th largest rare earth reserves but minimal processing capacity. Export restriction could accelerate domestic mining development (Odisha, Andhra Pradesh) but takes 5-7 years to build processing infrastructure." },
+      asean: { score: 0.45, level: "Medium", detail: "Myanmar and Vietnam have rare earth deposits attracting Chinese investment. Indonesia's nickel dominance gives some leverage. But downstream manufacturing (electronics assembly in Vietnam, Malaysia) faces component shortages." },
+    },
+    timeline: {
+      short: { title: "0 - 6 months", effects: "Rare earth prices spike 300-500% (precedent: 2010-2011). EV and wind turbine production lines face slowdowns. Japan activates strategic mineral stockpile (60-day reserve for key materials)." },
+      medium: { title: "6 - 24 months", effects: "Japan/Korea accelerate mineral recycling programs. Australia's Lynas expands Malaysian processing plant. Alternative motor designs (ferrite-based) gain R&D priority. WTO dispute filed." },
+      long: { title: "2 - 5 years", effects: "Structural supply chain diversification: India develops domestic processing, deep-sea mining advances, US/Australia/Canada mines reach production. But China's processing dominance persists for 5+ years." },
+    },
+    hidden: [
+      { title: "Green Transition Paradox", text: "Decarbonization requires more minerals. Each offshore wind turbine needs ~2 tons of rare earth magnets. Restriction exposes the uncomfortable truth: the green transition increases, not decreases, certain supply chain vulnerabilities." },
+      { title: "EV Industry Reshuffling", text: "Korean/Japanese EV makers lose cost advantage. Chinese EV companies (BYD, NIO) gain structural benefit from domestic mineral access. Shifts global EV market share permanently." },
+      { title: "Defense Implications", text: "F-35 fighters require ~920 lbs of rare earths. Precision missiles, satellite systems, submarine motors all depend on them. Japan and Korea's defense modernization programs face material constraints." },
+    ],
+    insights: [
+      { country: "japan", text: "Japan learned from the 2010 embargo and invested in recycling, substitution, and supply diversification. It is better prepared, but 'better' still means ~58% Chinese dependency. Preparation reduces but does not eliminate vulnerability." },
+      { country: "korea", text: "Korea's EV battery champions (LG, Samsung SDI, SK) have built globally competitive positions that rest on Chinese mineral access. A restriction doesn't just raise costs, it reshuffles the global EV competitive landscape." },
+      { country: "china", text: "The 'Green Transition Paradox': Asia's decarbonization strategy (EVs, wind, solar) increases, not decreases, dependency on Chinese-controlled mineral supply chains. The transition to clean energy creates new forms of energy insecurity." },
+    ],
+    crossCutting: "Critical minerals expose the paradox at the heart of Asia's energy transition: the shift from fossil fuel dependency doesn't eliminate supply chain risk. It transforms it. The countries most aggressively pursuing decarbonization may be creating new vulnerabilities faster than they resolve old ones.",
+  },
+};
+
+/* ── UI Atoms ─────────────────────────────────────────────────────── */
+
+const levelStyle = {
+  Beneficiary:  { bg: "#E3EFDF", fg: "#3A7D44" },
+  Low:          { bg: "#E3EFDF", fg: "#3A7D44" },
+  "Low-Med":    { bg: "#F5F0DC", fg: "#9B7B2F" },
+  Medium:       { bg: "#F5E6D0", fg: "#C2703A" },
+  "Medium-High":{ bg: "#F2DAD0", fg: "#B44040" },
+  High:         { bg: "#F2D0D0", fg: "#A03030" },
+  Critical:     { bg: "#E8D5F0", fg: "#6A3B8A" },
+};
+
+const Badge = ({ level }) => {
+  const s = levelStyle[level] || levelStyle.Medium;
+  return <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 3, fontSize: 11, fontWeight: 600, letterSpacing: "0.03em", background: s.bg, color: s.fg }}>{level}</span>;
+};
+
+const Bar = ({ score, color }) => {
+  const [w, setW] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setW(score * 100), 60); return () => clearTimeout(t); }, [score]);
+  return (
+    <div style={{ height: 18, background: "#EDECE6", borderRadius: 3, overflow: "hidden", position: "relative" }}>
+      <div style={{ height: "100%", width: w + "%", background: color, borderRadius: 3, transition: "width 0.8s cubic-bezier(.22,1,.36,1)", opacity: 0.65 }} />
+      <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: 11, fontWeight: 600, color: "#666", fontFamily: "'IBM Plex Mono', monospace" }}>{(score * 100).toFixed(0)}</span>
+    </div>
+  );
+};
+
+const H2 = ({ children, sub }) => (
+  <div style={{ marginBottom: 14 }}>
+    <h2 style={{ fontSize: 17, fontWeight: 700, color: "#222", margin: 0, fontFamily: "'Source Serif 4', Georgia, serif" }}>{children}</h2>
+    {sub && <p style={{ fontSize: 12.5, color: "#999", marginTop: 3, lineHeight: 1.5 }}>{sub}</p>}
+  </div>
+);
+
+const Card = ({ children, style }) => (
+  <div style={{ background: "#FFFFFF", border: "1px solid #E0DFD8", borderRadius: 5, padding: "14px 16px", ...style }}>{children}</div>
+);
+
+/* ── Panels ────────────────────────────────────────────────────────── */
+
+function ImpactPanel({ shock }) {
+  const [open, setOpen] = useState(null);
+  const sorted = Object.entries(shock.impacts).sort((a, b) => b[1].score - a[1].score);
+  return (
+    <div>
+      <H2 sub="Vulnerability = import dependence x exposure to shock. Higher = more vulnerable.">Impact Assessment</H2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {sorted.map(([k, d]) => {
+          const c = COUNTRIES[k]; const isOpen = open === k;
+          return (
+            <Card key={k} style={{ cursor: "pointer", border: isOpen ? "1px solid #bbb" : undefined }}>
+              <div onClick={() => setOpen(isOpen ? null : k)}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: c.color, fontFamily: "'IBM Plex Mono', monospace", width: 44 }}>{c.abbr}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</span>
+                      <Badge level={d.level} />
+                    </div>
+                    <Bar score={d.score} color={c.color} />
+                  </div>
+                  <span style={{ color: "#ccc", fontSize: 11, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "" }}>&#9662;</span>
+                </div>
+              </div>
+              {isOpen && <p style={{ fontSize: 13, color: "#666", lineHeight: 1.7, margin: 0, paddingTop: 10, borderTop: "1px solid #f0efea", animation: "fadeIn .2s" }}>{d.detail}</p>}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TimelinePanel({ shock }) {
+  const phases = [
+    { key: "short", sub: "Immediate Crisis" },
+    { key: "medium", sub: "Adjustment" },
+    { key: "long", sub: "Structural Shift" },
+  ];
+  return (
+    <div>
+      <H2 sub="How impacts evolve from immediate crisis to structural transformation.">Time Horizon Analysis</H2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {phases.map((p, i) => {
+          const t = shock.timeline[p.key];
+          return (
+            <Card key={p.key} style={{ animation: "fadeUp .3s ease " + (i * 0.07) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 5 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace", color: "#444" }}>{t.title}</span>
+                <span style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.sub}</span>
+              </div>
+              <p style={{ fontSize: 13, color: "#555", lineHeight: 1.7, margin: 0 }}>{t.effects}</p>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HiddenPanel({ shock }) {
+  return (
+    <div>
+      <H2 sub="Second-order consequences that conventional analysis often misses.">Hidden Dependencies and Cascading Effects</H2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {shock.hidden.map((h, i) => (
+          <Card key={i} style={{ animation: "fadeUp .3s ease " + (i * 0.07) + "s both" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 5 }}>{h.title}</div>
+            <p style={{ fontSize: 13, color: "#555", lineHeight: 1.7, margin: 0 }}>{h.text}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsightPanel({ shock }) {
+  return (
+    <div>
+      <H2 sub="Core analytical takeaways from this shock scenario.">Key Insights</H2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {shock.insights.map((item, i) => {
+          const c = COUNTRIES[item.country];
+          return (
+            <Card key={i} style={{ borderLeft: "3px solid " + c.color, animation: "fadeUp .3s ease " + (i * 0.07) + "s both" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: c.color, marginBottom: 5, fontFamily: "'IBM Plex Mono', monospace" }}>{c.name}</div>
+              <p style={{ fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0 }}>{item.text}</p>
+            </Card>
+          );
+        })}
+      </div>
+      <Card style={{ marginTop: 10, background: "#F3F2EC" }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: "#aaa", marginBottom: 5, fontWeight: 600 }}>Cross-Cutting Observation</div>
+        <p style={{ fontSize: 13.5, color: "#444", lineHeight: 1.75, margin: 0, fontFamily: "'Source Serif 4', Georgia, serif", fontStyle: "italic" }}>{shock.crossCutting}</p>
+      </Card>
+    </div>
+  );
+}
+
+function MatrixView() {
+  const countries = ["japan", "korea", "china", "india", "asean"];
+  const shockIds = ["russia_gas", "hormuz", "rare_earth"];
+  return (
+    <div>
+      <H2 sub="Which country is most vulnerable under which shock?">Cross-Shock Vulnerability Matrix</H2>
+      <Card style={{ overflowX: "auto", padding: 0 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid #E0DFD8" }}>
+              <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#aaa", fontSize: 11 }}>Country</th>
+              {shockIds.map(s => <th key={s} style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600, color: "#777", fontSize: 11 }}>{SHOCKS[s].title}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {countries.map((ck, i) => {
+              const c = COUNTRIES[ck];
+              return (
+                <tr key={ck} style={{ borderBottom: i < countries.length - 1 ? "1px solid #f0efea" : "none" }}>
+                  <td style={{ padding: "9px 14px", fontWeight: 600, color: c.color, fontSize: 13 }}>{c.name}</td>
+                  {shockIds.map(s => <td key={s} style={{ padding: "9px 12px", textAlign: "center" }}><Badge level={SHOCKS[s].impacts[ck].level} /></td>)}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+      <Card style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: "#aaa", marginBottom: 6, fontWeight: 600 }}>Key Findings</div>
+        <div style={{ fontSize: 13, color: "#555", lineHeight: 1.75 }}>
+          <p style={{ margin: "0 0 5px" }}><strong style={{ color: "#2B6777" }}>Japan</strong> faces the highest aggregate vulnerability across all three shocks, a function of island geography, post-Fukushima energy policy, and heavy import dependence.</p>
+          <p style={{ margin: "0 0 5px" }}><strong style={{ color: "#B44040" }}>China</strong> is the only country that can be both victim and aggressor depending on the shock, highlighting the asymmetric nature of energy security in Asia.</p>
+          <p style={{ margin: 0 }}><strong style={{ color: "#3A7D44" }}>South Korea</strong> shows consistently high vulnerability with fewer structural mitigation options than Japan.</p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Intro ─────────────────────────────────────────────────────────── */
+
+function IntroPage({ onEnter }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => { setTimeout(() => setShow(true), 60); }, []);
+  return (
+    <div style={{ minHeight: "100vh", background: "#F6F5F0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
+      <div style={{ opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(12px)", transition: "all .6s cubic-bezier(.22,1,.36,1)", maxWidth: 620, width: "100%" }}>
+
+        <div style={{ fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", color: "#bbb", marginBottom: 28, fontWeight: 500 }}>
+          Columbia SIPA &middot; Asian Energy Security &middot; Spring 2026
+        </div>
+
+        <h1 style={{ fontSize: "clamp(32px, 5.5vw, 44px)", fontWeight: 700, color: "#222", lineHeight: 1.15, margin: "0 0 12px", fontFamily: "'Source Serif 4', Georgia, serif" }}>
+          Asia Energy<br />Crisis Simulator
+        </h1>
+
+        <p style={{ fontSize: 17, color: "#777", lineHeight: 1.5, margin: "0 0 6px", fontFamily: "'Source Serif 4', Georgia, serif", fontStyle: "italic" }}>
+          How Shocks Reshape Regional Energy Security
+        </p>
+
+        <p style={{ fontSize: 13, color: "#aaa", margin: "0 0 28px" }}>
+          Lyu Song &middot; ls4125
+        </p>
+
+        <p style={{ fontSize: 15, color: "#666", lineHeight: 1.8, margin: "0 0 32px" }}>
+          Energy security is not just about average supply and demand. It is about vulnerability to <em style={{ color: "#444" }}>disruption</em>. This simulator models three real-world shock scenarios and traces their cascading impact across Asian economies, revealing hidden dependencies and divergent national vulnerabilities.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 28 }}>
+          {Object.values(SHOCKS).map(s => (
+            <div key={s.id} style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "13px 16px", display: "flex", alignItems: "baseline", gap: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#ccc", fontFamily: "'IBM Plex Mono', monospace" }}>{s.num}</span>
+              <div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>{s.title}</span>
+                <span style={{ fontSize: 12, color: "#999", marginLeft: 8 }}>{s.subtitle}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "16px 18px", marginBottom: 32 }}>
+          <div style={{ fontWeight: 700, color: "#666", marginBottom: 5, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>Analytical Framework</div>
+          <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.7, margin: 0 }}>
+            Each shock is analyzed through four dimensions: impact scoring based on <strong style={{ color: "#444" }}>import dependence x exposure coefficient</strong>, a three-horizon time dimension (short / medium / long-term), hidden second-order effects, and country-level comparative insights.
+          </p>
+        </div>
+
+        <button onClick={onEnter} style={{ background: "#333", color: "#fff", border: "none", borderRadius: 5, padding: "12px 28px", fontSize: 14, fontWeight: 600, letterSpacing: "0.02em" }}>
+          Enter Simulator
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main ──────────────────────────────────────────────────────────── */
+
+function App() {
+  const [view, setView] = useState("intro");
+  const [shock, setShock] = useState(null);
+  const [tab, setTab] = useState("impact");
+  const [anim, setAnim] = useState(0);
+
+  const pick = (id) => { setShock(id); setTab("impact"); setAnim(n => n + 1); };
+
+  if (view === "intro") return <IntroPage onEnter={() => setView("sim")} />;
+
+  const s = shock ? SHOCKS[shock] : null;
+  const tabs = [
+    { id: "impact", label: "Impact" },
+    { id: "timeline", label: "Timeline" },
+    { id: "hidden", label: "Hidden Effects" },
+    { id: "insight", label: "Insights" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F6F5F0" }}>
+      <header style={{ padding: "10px 20px", borderBottom: "1px solid #E0DFD8", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, background: "#F6F5F0" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#333" }}>Asia Energy Crisis Simulator</div>
+          <div style={{ fontSize: 10, color: "#bbb", letterSpacing: "0.05em" }}>Lyu Song &middot; ls4125 &middot; SIPA Spring 2026</div>
+        </div>
+        <div style={{ display: "flex", gap: 5 }}>
+          <button onClick={() => setShock(null)} style={{ background: "none", border: "1px solid #ddd", borderRadius: 4, color: "#999", padding: "4px 10px", fontSize: 11 }}>Matrix</button>
+          <button onClick={() => { setView("intro"); setShock(null); }} style={{ background: "none", border: "1px solid #ddd", borderRadius: 4, color: "#999", padding: "4px 10px", fontSize: 11 }}>Intro</button>
+        </div>
+      </header>
+
+      <div style={{ maxWidth: 740, margin: "0 auto", padding: "20px 16px 80px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <H2 sub="Select a geopolitical shock scenario.">Shock Scenarios</H2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {Object.values(SHOCKS).map(sh => (
+              <button key={sh.id} onClick={() => pick(sh.id)} style={{
+                background: "#fff", border: shock === sh.id ? "2px solid #333" : "1px solid #E0DFD8",
+                borderRadius: 5, padding: "12px 16px", textAlign: "left",
+                display: "flex", alignItems: "baseline", gap: 12, transition: "all .15s",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: shock === sh.id ? "#333" : "#ddd", fontFamily: "'IBM Plex Mono', monospace", minWidth: 20 }}>{sh.num}</span>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{sh.title}</span>
+                  <span style={{ fontSize: 12, color: "#aaa", marginLeft: 8 }}>{sh.subtitle}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {s ? (
+          <div key={shock} style={{ animation: "fadeUp .3s ease" }}>
+            <Card style={{ marginBottom: 16, background: "#F3F2EC" }}>
+              <p style={{ fontSize: 15, color: "#444", margin: "0 0 8px", fontFamily: "'Source Serif 4', Georgia, serif", fontStyle: "italic", lineHeight: 1.5 }}>
+                {'"' + s.tagline + '"'}
+              </p>
+              <p style={{ fontSize: 13, color: "#666", lineHeight: 1.7, margin: "0 0 10px" }}>{s.description}</p>
+              <div style={{ background: "#F6F5F0", borderRadius: 4, padding: "8px 12px", fontSize: 12, color: "#555", fontFamily: "'IBM Plex Mono', monospace", borderLeft: "3px solid #333" }}>
+                {s.mechanism}
+              </div>
+            </Card>
+
+            <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: "1px solid #E0DFD8" }}>
+              {tabs.map(t => (
+                <button key={t.id} onClick={() => { setTab(t.id); setAnim(n => n + 1); }} style={{
+                  padding: "9px 14px", border: "none", fontSize: 12.5,
+                  fontWeight: tab === t.id ? 700 : 400,
+                  color: tab === t.id ? "#333" : "#bbb",
+                  background: "none",
+                  borderBottom: tab === t.id ? "2px solid #333" : "2px solid transparent",
+                  marginBottom: -1, transition: "all .15s",
+                }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div key={shock + "-" + tab + "-" + anim} style={{ animation: "fadeIn .2s" }}>
+              {tab === "impact" && <ImpactPanel shock={s} />}
+              {tab === "timeline" && <TimelinePanel shock={s} />}
+              {tab === "hidden" && <HiddenPanel shock={s} />}
+              {tab === "insight" && <InsightPanel shock={s} />}
+            </div>
+          </div>
+        ) : (
+          <MatrixView />
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer style={{ borderTop: "1px solid #E0DFD8", padding: "16px 20px", textAlign: "center", fontSize: 11, color: "#bbb" }}>
+        Asia Energy Crisis Simulator &middot; Lyu Song (ls4125) &middot; CEENIA7435 Asian Energy Security &middot; Columbia SIPA, Spring 2026
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
