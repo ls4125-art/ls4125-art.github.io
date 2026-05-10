@@ -33,9 +33,18 @@ const COUNTRIES = {
   asean:  { name: "ASEAN",       abbr: "ASEAN", color: "#7B5EA7" },
 };
 
+const G_LABELS = {
+  geology: { label: "Geology", color: "#8B6914", bg: "#F5EDDA", desc: "Resource endowment and fossil fuel reserves" },
+  geography: { label: "Geography", color: "#2B6777", bg: "#DAE8ED", desc: "Chokepoints, maritime routes, and pipeline access" },
+  growth: { label: "Growth", color: "#3A7D44", bg: "#DFF0E0", desc: "Economic growth compounding import dependence" },
+  geopolitics: { label: "Geopolitics", color: "#7B3B5E", bg: "#F0DBE8", desc: "Alliance structures, sanctions, and strategic leverage" },
+};
+
 const SHOCKS = {
   russia_gas: {
     id: "russia_gas", title: "Russia Gas Cut", subtitle: "Pipeline & LNG Supply Disruption", num: "01",
+    fourG: ["geography", "geopolitics", "geology"],
+    fourGAnalysis: "This shock operates primarily through Geography (pipeline routes and maritime LNG transport), Geopolitics (sanctions, alliance structures, and energy weaponization), and Geology (Asia-Pacific's limited domestic gas reserves forcing import dependence). Countries with continental pipeline access (China) are structurally advantaged over island economies (Japan, Korea) that lack overland alternatives.",
     tagline: "What happens when Europe's crisis becomes Asia's problem?",
     description: "Russia supplies ~10% of global LNG and operates major pipelines to China. A full gas export cut disrupts Asian spot LNG markets, spikes prices, and forces emergency fuel-switching. Countries with high pipeline dependency (China) or LNG spot exposure (Japan, Korea) face immediate supply crunches.",
     mechanism: "Supply cut  >  LNG spot price spike  >  fuel-switching to coal/oil  >  emissions surge",
@@ -65,6 +74,8 @@ const SHOCKS = {
   },
   hormuz: {
     id: "hormuz", title: "Strait of Hormuz Disruption", subtitle: "Middle East Oil & LNG Chokepoint Crisis", num: "02",
+    fourG: ["geography", "growth", "geopolitics"],
+    fourGAnalysis: "This scenario is defined by Geography (the 33km-wide chokepoint that 21% of global oil must transit), amplified by Growth (Asia-Pacific's rapidly growing oil consumption far exceeding domestic production), and shaped by Geopolitics (US naval security guarantees and Middle East alliance structures). As Professor Liu's framework shows, Asia lacks the integrated pipeline infrastructure that North America and Europe enjoy, making maritime chokepoints existentially important.",
     tagline: "21% of global oil flows through a 33km-wide strait.",
     description: "The Strait of Hormuz is the world's most critical energy chokepoint. ~20 million barrels/day of oil and ~25% of global LNG transits through it. A military blockade or closure would trigger the most severe energy supply crisis since 1973, disproportionately hitting Asia's import-dependent economies.",
     mechanism: "Chokepoint closure  >  oil & LNG supply halt  >  global price shock  >  strategic reserve drawdown",
@@ -94,6 +105,8 @@ const SHOCKS = {
   },
   rare_earth: {
     id: "rare_earth", title: "Rare Earth Export Restriction", subtitle: "China Restricts Critical Mineral Exports", num: "03",
+    fourG: ["geology", "geopolitics", "growth"],
+    fourGAnalysis: "This scenario is rooted in Geology (the uneven global distribution of rare earth deposits and China's dominant processing capacity), weaponized through Geopolitics (export restrictions as strategic leverage), and amplified by Growth (surging demand for EVs, wind turbines, and electronics across rapidly growing Asian economies). It extends the 4G framework beyond traditional fossil fuels to reveal how the energy transition creates new forms of geological and geopolitical dependency.",
     tagline: "The hidden dependency that could stall Asia's green transition.",
     description: "China controls ~60% of rare earth mining and ~90% of processing. A targeted export restriction on rare earth elements (neodymium, dysprosium, etc.) and processed materials would cripple EV manufacturing, wind turbine production, and advanced electronics across Asia, exposing the 'green transition paradox' where decarbonization increases mineral dependency.",
     mechanism: "Export restriction  >  mineral supply deficit  >  EV & renewable production slowdown  >  green transition stalls",
@@ -140,6 +153,11 @@ const Badge = ({ level }) => {
   return <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 3, fontSize: 11, fontWeight: 600, letterSpacing: "0.03em", background: s.bg, color: s.fg }}>{level}</span>;
 };
 
+const GTag = ({ g }) => {
+  const info = G_LABELS[g];
+  return <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 10, fontWeight: 600, letterSpacing: "0.03em", background: info.bg, color: info.color, marginRight: 4, marginBottom: 4 }}>{info.label}</span>;
+};
+
 const Bar = ({ score, color }) => {
   const [w, setW] = useState(0);
   useEffect(() => { const t = setTimeout(() => setW(score * 100), 60); return () => clearTimeout(t); }, [score]);
@@ -163,6 +181,32 @@ const Card = ({ children, style }) => (
 );
 
 /* ── Panels ────────────────────────────────────────────────────────── */
+
+function FourGPanel({ shock }) {
+  return (
+    <div>
+      <H2 sub="How this shock maps onto Asia's distinctive energy challenges.">4G Framework Analysis</H2>
+      <Card style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 10 }}>
+          {shock.fourG.map(g => <GTag key={g} g={g} />)}
+        </div>
+        <p style={{ fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0 }}>{shock.fourGAnalysis}</p>
+      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {Object.entries(G_LABELS).map(([key, info]) => {
+          const active = shock.fourG.includes(key);
+          return (
+            <Card key={key} style={{ opacity: active ? 1 : 0.4, border: active ? "1px solid " + info.color + "44" : undefined, padding: "10px 12px" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: info.color, marginBottom: 3 }}>{info.label}</div>
+              <div style={{ fontSize: 11, color: "#888", lineHeight: 1.4 }}>{info.desc}</div>
+              {active && <div style={{ fontSize: 10, color: info.color, marginTop: 4, fontWeight: 600 }}>Active in this scenario</div>}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ImpactPanel({ shock }) {
   const [open, setOpen] = useState(null);
@@ -290,6 +334,19 @@ function MatrixView() {
           </tbody>
         </table>
       </Card>
+      {/* 4G Summary */}
+      <Card style={{ marginTop: 10 }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: "#aaa", marginBottom: 8, fontWeight: 600 }}>4G Dimensions by Scenario</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {Object.values(SHOCKS).map(s => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#666", fontFamily: "'IBM Plex Mono', monospace", minWidth: 20 }}>{s.num}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#444", minWidth: 180 }}>{s.title}</span>
+              <div>{s.fourG.map(g => <GTag key={g} g={g} />)}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card style={{ marginTop: 10 }}>
         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: "#aaa", marginBottom: 6, fontWeight: 600 }}>Key Findings</div>
         <div style={{ fontSize: 13, color: "#555", lineHeight: 1.75 }}>
@@ -327,26 +384,45 @@ function IntroPage({ onEnter }) {
           Lyu Song &middot; ls4125
         </p>
 
-        <p style={{ fontSize: 15, color: "#666", lineHeight: 1.8, margin: "0 0 32px" }}>
+        <p style={{ fontSize: 15, color: "#666", lineHeight: 1.8, margin: "0 0 28px" }}>
           Energy security is not just about average supply and demand. It is about vulnerability to <em style={{ color: "#444" }}>disruption</em>. This simulator models three real-world shock scenarios and traces their cascading impact across Asian economies, revealing hidden dependencies and divergent national vulnerabilities.
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 28 }}>
+        {/* 4G Framework */}
+        <div style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "18px 20px", marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, color: "#555", marginBottom: 10, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>The 4G Framework</div>
+          <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.7, margin: "0 0 12px" }}>
+            Following Professor Liu's analytical framework, Asia's distinctive energy challenges arise from the interaction of four forces. Each shock scenario in this simulator is analyzed through these four dimensions:
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {Object.entries(G_LABELS).map(([key, info]) => (
+              <div key={key} style={{ background: info.bg, borderRadius: 4, padding: "10px 12px" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: info.color }}>{info.label}</div>
+                <div style={{ fontSize: 11.5, color: "#888", marginTop: 2, lineHeight: 1.4 }}>{info.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Scenarios */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 24 }}>
           {Object.values(SHOCKS).map(s => (
-            <div key={s.id} style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "13px 16px", display: "flex", alignItems: "baseline", gap: 12 }}>
+            <div key={s.id} style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "13px 16px", display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "#ccc", fontFamily: "'IBM Plex Mono', monospace" }}>{s.num}</span>
-              <div>
+              <div style={{ flex: 1 }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>{s.title}</span>
                 <span style={{ fontSize: 12, color: "#999", marginLeft: 8 }}>{s.subtitle}</span>
               </div>
+              <div>{s.fourG.map(g => <GTag key={g} g={g} />)}</div>
             </div>
           ))}
         </div>
 
+        {/* Framework box */}
         <div style={{ background: "#fff", border: "1px solid #E0DFD8", borderRadius: 5, padding: "16px 18px", marginBottom: 32 }}>
-          <div style={{ fontWeight: 700, color: "#666", marginBottom: 5, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>Analytical Framework</div>
+          <div style={{ fontWeight: 700, color: "#666", marginBottom: 5, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>Analytical Method</div>
           <p style={{ fontSize: 13.5, color: "#777", lineHeight: 1.7, margin: 0 }}>
-            Each shock is analyzed through four dimensions: impact scoring based on <strong style={{ color: "#444" }}>import dependence x exposure coefficient</strong>, a three-horizon time dimension (short / medium / long-term), hidden second-order effects, and country-level comparative insights.
+            Each shock is analyzed through: the 4G framework mapping, impact scoring based on <strong style={{ color: "#444" }}>import dependence x exposure coefficient</strong>, a three-horizon time dimension (short / medium / long-term), hidden second-order effects, and country-level comparative insights.
           </p>
         </div>
 
@@ -363,15 +439,16 @@ function IntroPage({ onEnter }) {
 function App() {
   const [view, setView] = useState("intro");
   const [shock, setShock] = useState(null);
-  const [tab, setTab] = useState("impact");
+  const [tab, setTab] = useState("fourG");
   const [anim, setAnim] = useState(0);
 
-  const pick = (id) => { setShock(id); setTab("impact"); setAnim(n => n + 1); };
+  const pick = (id) => { setShock(id); setTab("fourG"); setAnim(n => n + 1); };
 
   if (view === "intro") return <IntroPage onEnter={() => setView("sim")} />;
 
   const s = shock ? SHOCKS[shock] : null;
   const tabs = [
+    { id: "fourG", label: "4G Analysis" },
     { id: "impact", label: "Impact" },
     { id: "timeline", label: "Timeline" },
     { id: "hidden", label: "Hidden Effects" },
@@ -399,13 +476,14 @@ function App() {
               <button key={sh.id} onClick={() => pick(sh.id)} style={{
                 background: "#fff", border: shock === sh.id ? "2px solid #333" : "1px solid #E0DFD8",
                 borderRadius: 5, padding: "12px 16px", textAlign: "left",
-                display: "flex", alignItems: "baseline", gap: 12, transition: "all .15s",
+                display: "flex", alignItems: "center", gap: 12, transition: "all .15s",
               }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: shock === sh.id ? "#333" : "#ddd", fontFamily: "'IBM Plex Mono', monospace", minWidth: 20 }}>{sh.num}</span>
-                <div>
+                <div style={{ flex: 1 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{sh.title}</span>
                   <span style={{ fontSize: 12, color: "#aaa", marginLeft: 8 }}>{sh.subtitle}</span>
                 </div>
+                <div>{sh.fourG.map(g => <GTag key={g} g={g} />)}</div>
               </button>
             ))}
           </div>
@@ -423,10 +501,10 @@ function App() {
               </div>
             </Card>
 
-            <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: "1px solid #E0DFD8" }}>
+            <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: "1px solid #E0DFD8", flexWrap: "wrap" }}>
               {tabs.map(t => (
                 <button key={t.id} onClick={() => { setTab(t.id); setAnim(n => n + 1); }} style={{
-                  padding: "9px 14px", border: "none", fontSize: 12.5,
+                  padding: "9px 12px", border: "none", fontSize: 12,
                   fontWeight: tab === t.id ? 700 : 400,
                   color: tab === t.id ? "#333" : "#bbb",
                   background: "none",
@@ -439,6 +517,7 @@ function App() {
             </div>
 
             <div key={shock + "-" + tab + "-" + anim} style={{ animation: "fadeIn .2s" }}>
+              {tab === "fourG" && <FourGPanel shock={s} />}
               {tab === "impact" && <ImpactPanel shock={s} />}
               {tab === "timeline" && <TimelinePanel shock={s} />}
               {tab === "hidden" && <HiddenPanel shock={s} />}
@@ -450,7 +529,6 @@ function App() {
         )}
       </div>
 
-      {/* Footer */}
       <footer style={{ borderTop: "1px solid #E0DFD8", padding: "16px 20px", textAlign: "center", fontSize: 11, color: "#bbb" }}>
         Asia Energy Crisis Simulator &middot; Lyu Song (ls4125) &middot; CEENIA7435 Asian Energy Security &middot; Columbia SIPA, Spring 2026
       </footer>
